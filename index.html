@@ -9,34 +9,27 @@
     :root { --w: 260px; }
     body { font-family: "Noto Sans TC","Microsoft JhengHei",sans-serif; margin: 20px; }
     h1 { font-size: 20px; margin: 0 0 10px; }
-    .card { border: 1px solid #ddd; border-radius: 10px; padding: 16px; max-width: 680px; }
-    .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-    label { font-weight: 600; }
-    input[type="text"] { padding: 8px 10px; font-size: 16px; border: 1px solid #ccc; border-radius: 8px; }
-    button { padding: 10px 14px; font-size: 15px; border-radius: 10px; border: 1px solid #ccc; background: #f8f8f8; cursor: pointer; }
-    button:disabled { opacity: 0.5; cursor: not-allowed; }
-    #writer { width: var(--w); height: var(--w); border: 1px dashed #bbb; border-radius: 12px; margin: 12px 0; }
-    .chips { display: flex; gap: 8px; flex-wrap: wrap; margin: 4px 0 10px; }
+    .card { border: 1px solid #ddd; border-radius: 10px; padding: 16px; max-width: 720px; }
+    .chips { display: flex; gap: 8px; flex-wrap: wrap; margin: 6px 0 10px; }
     .chip { border: 1px solid #ccc; border-radius: 999px; padding: 6px 10px; font-size: 14px; }
     .chip.done { background: #e8f7e8; border-color: #9ad09a; }
-    .muted { color: #666; }
-    .success { color: #0a7c2f; font-weight: 700; }
-    .footer { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-    .sep { height: 1px; background: #eee; margin: 14px 0; }
-    #log { white-space: pre-wrap; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px; background: #fafafa; border: 1px solid #eee; border-radius: 8px; padding: 10px; }
+    #writer { width: var(--w); height: var(--w); border: 1px dashed #bbb; border-radius: 12px; margin: 12px 0; }
+    .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    button { padding: 10px 14px; font-size: 15px; border-radius: 10px; border: 1px solid #ccc; background: #f8f8f8; cursor: pointer; }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+    .muted { color:#666; }
+    .success { color:#0a7c2f; font-weight:700; }
   </style>
 </head>
 <body>
   <div class="card">
     <h1>Hanzi Writer 作業：指定漢字（每字一遍）</h1>
     <p class="muted">教師指定：<strong id="assigned"></strong></p>
-    <div class="row">
-      <label for="stuName">姓名</label><input id="stuName" type="text" placeholder="請輸入姓名" />
-      <label for="stuId">學號（選填）</label><input id="stuId" type="text" placeholder="學號（選填）" />
-      <button id="btnStart">開始作業</button>
-    </div>
 
-    <div class="sep"></div>
+    <div class="row" style="margin:6px 0 10px;">
+      <button id="btnStart">開始作業</button>
+      <span id="hint" class="muted">按「開始作業」後，依序完成每個漢字的描紅練習即可。</span>
+    </div>
 
     <div id="stage" style="display:none;">
       <div class="chips" id="chips"></div>
@@ -46,52 +39,32 @@
         <button id="btnQuiz">開始描紅</button>
       </div>
       <p id="progress" class="muted"></p>
+      <p id="doneMsg" class="success"></p>
     </div>
-
-    <div class="sep"></div>
-
-    <div class="footer">
-      <button id="btnDownloadJson" disabled>下載成績記錄（JSON）</button>
-      <button id="btnDownloadCsv" disabled>下載成績記錄（CSV）</button>
-      <span id="doneMsg" class="success"></span>
-    </div>
-
-    <details style="margin-top:10px;">
-      <summary class="muted">顯示記錄原始資料（除錯用）</summary>
-      <div id="log"></div>
-    </details>
   </div>
 
   <script>
-    // === 教師指定的漢字（可修改） ===
-    const ASSIGNED_CHARS = ['一','二','丁','卜','三']; // 例如：一、二、丁、卜、三
+    // 指定漢字（老師提供）
+    const ASSIGNED_CHARS = ['釋','寶','餘','歲','壽','團','圓','蘿','蔔','糕'];
 
-    // === 狀態 ===
+    // 狀態
     let writer = null;
-    let idx = 0;
-    let startedAt = null;
-    let finishedAt = null;
-    const results = []; // {char, completedAt, totalQuizStarts}
-    let totalQuizStartsForCurrent = 0;
+    let idx = 0; // 目前進行到第幾個字
 
-    // === 元件 ===
+    // 元件
     const elAssigned = document.getElementById('assigned');
     const elStart = document.getElementById('btnStart');
+    const elStage = document.getElementById('stage');
+    const elChips = document.getElementById('chips');
+    const elWriter = document.getElementById('writer');
     const elAnimate = document.getElementById('btnAnimate');
     const elQuiz = document.getElementById('btnQuiz');
     const elProgress = document.getElementById('progress');
-    const elWriter = document.getElementById('writer');
-    const elStage = document.getElementById('stage');
-    const elChips = document.getElementById('chips');
     const elDoneMsg = document.getElementById('doneMsg');
-    const elLog = document.getElementById('log');
-    const elDownloadJson = document.getElementById('btnDownloadJson');
-    const elDownloadCsv = document.getElementById('btnDownloadCsv');
 
     // 顯示指定清單
     elAssigned.textContent = ASSIGNED_CHARS.join('、');
 
-    // 建立 chips
     function renderChips() {
       elChips.innerHTML = '';
       ASSIGNED_CHARS.forEach((c, i) => {
@@ -118,127 +91,34 @@
     }
 
     function startQuizOnce() {
-      totalQuizStartsForCurrent += 1;
       writer.quiz({
         onComplete: () => {
-          const now = new Date().toISOString();
-          results.push({
-            char: ASSIGNED_CHARS[idx],
-            completedAt: now,
-            totalQuizStarts: totalQuizStartsForCurrent
-          });
           idx += 1;
           renderChips();
           if (idx < ASSIGNED_CHARS.length) {
-            totalQuizStartsForCurrent = 0;
             initWriter(ASSIGNED_CHARS[idx]);
             updateProgress();
           } else {
-            finishedAt = new Date();
-            onAllDone();
+            elAnimate.disabled = true;
+            elQuiz.disabled = true;
+            elDoneMsg.textContent = '✅ 全部完成！請截圖此畫面作為完成證明。';
           }
         }
       });
     }
 
-    function onAllDone() {
-      elAnimate.disabled = true;
-      elQuiz.disabled = true;
-      elDoneMsg.textContent = '✅ 所有指定漢字均已完成！請下載成績記錄上傳。';
-      elDownloadJson.disabled = false;
-      elDownloadCsv.disabled = false;
-      dumpLog();
-    }
-
-    function dumpLog() {
-      const record = buildRecord();
-      elLog.textContent = JSON.stringify(record, null, 2);
-    }
-
-    function buildRecord() {
-      const name = document.getElementById('stuName').value.trim();
-      const sid = document.getElementById('stuId').value.trim();
-      const startedISO = startedAt ? startedAt.toISOString() : null;
-      const finishedISO = finishedAt ? finishedAt.toISOString() : null;
-      const totalSeconds = (startedAt && finishedAt) ? Math.round((finishedAt - startedAt) / 1000) : null;
-      return {
-        assignment: '指定漢字每字一遍',
-        assignedChars: ASSIGNED_CHARS,
-        student: { name, id: sid },
-        startedAt: startedISO,
-        finishedAt: finishedISO,
-        totalSeconds,
-        userAgent: navigator.userAgent,
-        results
-      };
-    }
-
-    function download(filename, mime, content) {
-      const blob = new Blob([content], {type: mime});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(() => {
-        URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-      }, 0);
-    }
-
-    function toCSV(record) {
-      const header = ['name','id','assignment','char','completedAt','totalQuizStarts','startedAt','finishedAt','totalSeconds'];
-      const rows = record.results.map(r => [
-        record.student.name || '',
-        record.student.id || '',
-        record.assignment,
-        r.char,
-        r.completedAt,
-        r.totalQuizStarts,
-        record.startedAt || '',
-        record.finishedAt || '',
-        record.totalSeconds || ''
-      ]);
-      const all = [header].concat(rows);
-      return all.map(line => line.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
-    }
-
     // 事件
     elStart.addEventListener('click', () => {
-      const name = document.getElementById('stuName').value.trim();
-      if (!name) { alert('請先輸入姓名'); return; }
-      startedAt = new Date();
       idx = 0;
-      results.length = 0;
-      totalQuizStartsForCurrent = 0;
-      elStage.style.display = 'block';
       elDoneMsg.textContent = '';
-      elDownloadJson.disabled = true;
-      elDownloadCsv.disabled = true;
+      elStage.style.display = 'block';
       renderChips();
       initWriter(ASSIGNED_CHARS[idx]);
       updateProgress();
-      dumpLog();
     });
 
-    elAnimate.addEventListener('click', () => {
-      if (writer) writer.animateCharacter();
-    });
-
-    elQuiz.addEventListener('click', () => {
-      if (writer) startQuizOnce();
-    });
-
-    elDownloadJson.addEventListener('click', () => {
-      const rec = buildRecord();
-      download(`HW_record_${(rec.student.name||'student')}.json`, 'application/json;charset=utf-8', JSON.stringify(rec, null, 2));
-    });
-
-    elDownloadCsv.addEventListener('click', () => {
-      const rec = buildRecord();
-      download(`HW_record_${(rec.student.name||'student')}.csv`, 'text/csv;charset=utf-8', toCSV(rec));
-    });
+    elAnimate.addEventListener('click', () => { if (writer) writer.animateCharacter(); });
+    elQuiz.addEventListener('click', () => { if (writer) startQuizOnce(); });
   </script>
 </body>
 </html>
