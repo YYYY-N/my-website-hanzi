@@ -5,17 +5,45 @@
   <title>Hanzi Writer 作業：指定漢字（每字一遍）</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@latest/dist/hanzi-writer.min.js"></script>
- <style>
+<style>
   :root { --w: 260px; }
+  
   body {
-    font-family: "Noto Sans TC","Microsoft JhengHei",sans-serif;
-    margin: 20px;
-    background-color: #F5F5DC; /* <-- 加在這裡 */
+    font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+    background-color: #F5F5DC;
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
   }
+
+  .card {
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    padding: 16px;
+    max-width: 900px;
+    width: 90%;
+  }
+  
   h1 { font-size: 20px; margin: 0 0 10px; }
-  .card { border: 1px solid #ddd; border-radius: 10px; padding: 16px; max-width: 720px; }
-  .chips { display: flex; gap: 8px; flex-wrap: wrap; margin: 6px 0 10px; }
-  .chip { border: 1px solid #ccc; border-radius: 999px; padding: 6px 10px; font-size: 14px; }
+
+  /* --- 修改開始 --- */
+  .chips {
+    display: flex;
+    gap: 12px; /* 將按鈕間距從 8px 增加到 12px */
+    flex-wrap: wrap;
+    margin: 6px 0 10px;
+  }
+  .chip {
+    border: 1px solid #ccc;
+    border-radius: 999px;
+    padding: 8px 15px; /* 將內距加大，讓按鈕更大 */
+    font-size: 18px;   /* 將字體從 14px 放大到 18px */
+    font-weight: 500;  /* 讓字體稍微加粗，更清晰 */
+  }
+  /* --- 修改結束 --- */
+  
   .chip.done { background: #e8f7e8; border-color: #9ad09a; }
   #writer { width: var(--w); height: var(--w); border: 1px dashed #bbb; border-radius: 12px; margin: 12px 0; }
   .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
@@ -23,8 +51,7 @@
   button:disabled { opacity: .5; cursor: not-allowed; }
   .muted { color:#666; }
   .success { color:#0a7c2f; font-weight:700; }
-</style>
-</head>
+</style></head>
 <body>
   <div class="card">
     <h1>Hanzi Writer 作業：指定漢字（每字一遍）</h1>
